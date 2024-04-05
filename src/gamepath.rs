@@ -122,16 +122,18 @@ impl SimpleComponent for GamePathModel {
 
                 // Make the user select a folder
                 chooser.select_folder(Some(&self.root_window), Some(&cancellable), move |result| {
-                    // Get the absolute path of the selected folder
-                    let path = result.unwrap().path().unwrap();
-                    let path = path.as_path().display().to_string();
+                    if result.clone().err() == None {
+                        // Get the absolute path of the selected folder
+                        let path = result.unwrap().path().unwrap();
+                        let path = path.as_path().display().to_string();
 
-                    // Set it as the current buffer of the game path entry
-                    set_entry_text(&entry, &path);
+                        // Set it as the current buffer of the game path entry
+                        set_entry_text(&entry, &path);
 
-                    // Send the submit signal
-                    _sender.input(GamePathInput::Submit(entry));
-                })
+                        // Send the submit signal
+                        _sender.input(GamePathInput::Submit(entry));
+                    }
+                });
             }
         }
     }

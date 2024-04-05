@@ -99,6 +99,7 @@ impl SimpleComponent for AppModel {
 
                     gtk4::Button {
                         set_label: "Add new mod",
+                        set_css_classes: &["suggested-action"],
 
                         // connect_clicked[sender, mods_columnview] => move |_|{
                         //     sender.input(AppInput::AddNewMod(mods_columnview.clone()));
@@ -120,9 +121,9 @@ impl SimpleComponent for AppModel {
         let gamepath = gamepath::GamePathModel::builder()
             .launch(gamepath_input)
             .forward(sender.input_sender(), |msg| msg);
-            // .forward(sender.input_sender(), |msg| match msg {
-            //     gamepath::GamePathOutput::SetPath(new_path) => AppInput::SetPath(new_path),
-            // });
+        // .forward(sender.input_sender(), |msg| match msg {
+        //     gamepath::GamePathOutput::SetPath(new_path) => AppInput::SetPath(new_path),
+        // });
 
         // Mod list compoonent
         let modlist =
@@ -144,13 +145,13 @@ impl SimpleComponent for AppModel {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
-            AppInput::Ignore => {},
+            AppInput::Ignore => {}
 
             AppInput::SetPath(new_path) => {
                 self.game_install_path = new_path;
-            },
+            }
 
-            AppInput::SelectMod(mods_columnview) => {},
+            AppInput::SelectMod(mods_columnview) => {}
 
             AppInput::AddNewMod(mods_columnview) => {
                 let factory = gtk4::SignalListItemFactory::new();
@@ -169,7 +170,7 @@ impl SimpleComponent for AppModel {
 
                 mods_columnview.insert_column(0, &name_column);
                 mods_columnview.insert_column(1, &version_column);
-            },
+            }
         }
 
         println!("Debug: {}", self.game_install_path);
