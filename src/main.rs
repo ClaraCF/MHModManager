@@ -13,9 +13,9 @@ struct AppModel {
 
 #[derive(Debug)]
 enum AppInput {
-    GamePathSubmit(String),
-    GamePathClear,
-    GamePathBrowse,
+    GamePathSubmit(gtk4::Entry),
+    GamePathClear(gtk4::Entry),
+    GamePathBrowse(gtk4::Window, gtk4::Entry),
 }
 
 struct AppWidgets {}
@@ -27,15 +27,6 @@ impl SimpleComponent for AppModel {
     type Init = String;
     //type Root = gtk::Window;
     //type Widgets = AppWidgets;
-
-    /// Initialize the root window
-    /*fn init_root() -> Self::Root {
-        gtk::Window::builder()
-            .title("Monster Hunter Mod Manager")
-            .default_width(960)
-            .default_height(540)
-            .build()
-    }*/
 
     view! {
         #[root]
@@ -68,48 +59,31 @@ impl SimpleComponent for AppModel {
                     gtk::Entry {
                         set_hexpand: true,
                         set_halign: Align::Fill,
-
-                        connect_activate[sender] => move |entry| {
-                            let buffer = entry.clone().buffer();
-                            let text = buffer.text().to_string();
-                            sender.input(AppInput::GamePathSubmit(text));
+                        connect_activate[sender] => move |entry|{
+                            sender.input(AppInput::GamePathSubmit(entry.clone()));
                         }
                     },
 
                     gtk::Button {
                         set_label: "Submit",
                         connect_clicked[sender, game_path_entry] => move |_| {
-                            let buffer = game_path_entry.buffer();
-                            let text = buffer.text().to_string();
-                            sender.input(AppInput::GamePathSubmit(text));
+                            sender.input(AppInput::GamePathSubmit(game_path_entry.clone()));
                         }
                     },
 
                     gtk::Button {
                         set_label: "Clear",
                         connect_clicked[sender, game_path_entry] => move |_| {
-                            let buffer = game_path_entry.buffer();
-                            buffer.delete_text(0, None);
-                            sender.input(AppInput::GamePathClear);
+                            sender.input(AppInput::GamePathClear(game_path_entry.clone()));
                         }
                     },
 
                     gtk::Button {
                         set_label: "Browse",
                         connect_clicked[sender, root_window, game_path_entry] => move |_| {
-                            let cancellable = gio::Cancellable::new();
-                            let chooser = FileDialog::builder()
-                                .modal(true)
-                                .title("Choose the game installation directory")
-                                .build();
-                            chooser.select_folder(
-                                Some(&root_window), Some(&cancellable), clone!(
-                                    @strong game_path_entry, @strong sender => move |result|{
-                                        let path: String = result.unwrap().path().unwrap().as_path().display().to_string();
-                                        let buffer = game_path_entry.buffer();
-                                        buffer.set_text(path.clone());
-                                        sender.input(AppInput::GamePathSubmit(path.clone()));
-                                }))
+                            sender.input(
+                                AppInput::GamePathBrowse(root_window.clone(), game_path_entry.clone())
+                            );
                         }
                     },
                 }
@@ -130,13 +104,43 @@ impl SimpleComponent for AppModel {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
-            AppInput::GamePathSubmit(new_path) => {
-                self.game_path = new_path;
+            AppInput::GamePathSubmit(entry) => {
+                // Grab the current text from the entry
+                let buffer = entry.buffer();
+                let text: String = buffer.text().into();
+
+                // Set that text as the game path
+                self.game_path = text;
             }
-            AppInput::GamePathClear => {
+            AppInput::GamePathClear(entry) => {
+                // Set the game path as an empty string
                 self.game_path = String::from("");
+
+                // Clear the entry
+                let buffer = entry.buffer();
+                buffer.set_text("");
             }
-            _ => {}
+            AppInput::GamePathBrowse(root_window, entry) => {
+                let cancellable = gio::Cancellable::new();
+                let chooser = FileDialog::builder()
+                    .modal(true)
+                    .title("Choose the game installation directory")
+                    .build();
+
+                // Make the user select a folder
+                chooser.select_folder(Some(&root_window), Some(&cancellable), move |result| {
+                    // Get the absolute path of the selected folder
+                    let path = result.unwrap().path().unwrap();
+                    let path: String = path.as_path().display().to_string();
+
+                    // Set it as the current buffer of the game path entry
+                    let buffer = entry.buffer();
+                    buffer.set_text(path);
+
+                    // Send the submit signal
+                    _sender.input(AppInput::GamePathSubmit(entry));
+                })
+            }
         }
 
         println!("Debug: {}", self.game_path);
@@ -144,6 +148,6 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
-    let app = RelmApp::new("me.clara.mh-mod-manager");
-    app.run::<AppModel>(String::from("~/.steam"));
+    let app = RelmApp::new("me.claracf.mh-mod-manager");
+    app.run::<AppModel>(String::from(""));
 }
