@@ -5,25 +5,28 @@ use relm4::prelude::*;
 
 pub struct GamePathModel {
     root_window: gtk4::Window,
-    game_path: String,
+    default_game_path: String,
 }
 
 #[derive(Debug)]
 pub enum GamePathInput {
-    SubmitPath(gtk4::Entry),
-    ClearPath(gtk4::Entry),
-    BrowsePath(gtk4::Entry),
+    Submit(gtk4::Entry),
+    Clear(gtk4::Entry),
+    Browse(gtk4::Entry),
 }
 
-#[derive(Debug)]
-pub enum GamePathOutput {}
+// #[derive(Debug)]
+// pub enum GamePathOutput {
+//     SetPath(String),
+// }
 
 pub struct GamePathWidgets {}
 
 #[relm4::component(pub)]
 impl SimpleComponent for GamePathModel {
     type Input = GamePathInput;
-    type Output = GamePathOutput;
+    // type Output = GamePathOutput;
+    type Output = crate::AppInput;
     type Init = (gtk4::Window, String);
     //type Root = gtk4::Box;
     //type Widgets = GamePathWidgets;
@@ -47,21 +50,21 @@ impl SimpleComponent for GamePathModel {
                 set_hexpand: true,
                 set_halign: gtk4::Align::Fill,
                 connect_activate[sender] => move |entry|{
-                    sender.input(GamePathInput::SubmitPath(entry.clone()));
+                    sender.input(GamePathInput::Submit(entry.clone()));
                 }
             },
 
             gtk4::Button {
                 set_label: "Submit",
                 connect_clicked[sender, game_path_entry] => move |_| {
-                    sender.input(GamePathInput::SubmitPath(game_path_entry.clone()));
+                    sender.input(GamePathInput::Submit(game_path_entry.clone()));
                 }
             },
 
             gtk4::Button {
                 set_label: "Clear",
                 connect_clicked[sender, game_path_entry] => move |_| {
-                    sender.input(GamePathInput::ClearPath(game_path_entry.clone()));
+                    sender.input(GamePathInput::Clear(game_path_entry.clone()));
                 }
             },
 
@@ -69,7 +72,7 @@ impl SimpleComponent for GamePathModel {
                 set_label: "Browse",
                 connect_clicked[sender, game_path_entry] => move |_| {
                     sender.input(
-                        GamePathInput::BrowsePath(game_path_entry.clone())
+                        GamePathInput::Browse(game_path_entry.clone())
                     );
                 }
             },
@@ -85,36 +88,32 @@ impl SimpleComponent for GamePathModel {
         // Define the model of the component
         let model = GamePathModel {
             root_window: input.0,
-            game_path: input.1,
+            default_game_path: input.1,
         };
 
         // Collect the widgets of the component
         let widgets = view_output!();
+
+        // Set the default entry path
+        set_entry_text(&widgets.game_path_entry, &model.default_game_path);
 
         ComponentParts { model, widgets }
     }
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
-            GamePathInput::SubmitPath(entry) => {
-                // Grab the current text from the entry
-                let buffer = entry.buffer();
-                let text: String = buffer.text().into();
-
-                // Set that text as the game path
-                self.game_path = text;
+            GamePathInput::Submit(entry) => {
+                let text = get_entry_text(&entry);
+                _sender.output(Self::Output::SetPath(text)).unwrap();
             }
 
-            GamePathInput::ClearPath(entry) => {
-                // Set the game path as an empty string
-                self.game_path = String::from("");
-
+            GamePathInput::Clear(entry) => {
                 // Clear the entry
-                let buffer = entry.buffer();
-                buffer.set_text("");
+                set_entry_text(&entry, "");
+                _sender.input(GamePathInput::Submit(entry));
             }
 
-            GamePathInput::BrowsePath(entry) => {
+            GamePathInput::Browse(entry) => {
                 let cancellable = gio::Cancellable::new();
                 let chooser = FileDialog::builder()
                     .modal(true)
@@ -125,17 +124,25 @@ impl SimpleComponent for GamePathModel {
                 chooser.select_folder(Some(&self.root_window), Some(&cancellable), move |result| {
                     // Get the absolute path of the selected folder
                     let path = result.unwrap().path().unwrap();
-                    let path: String = path.as_path().display().to_string();
+                    let path = path.as_path().display().to_string();
 
                     // Set it as the current buffer of the game path entry
-                    let buffer = entry.buffer();
-                    buffer.set_text(path);
+                    set_entry_text(&entry, &path);
 
                     // Send the submit signal
-                    _sender.input(GamePathInput::SubmitPath(entry));
+                    _sender.input(GamePathInput::Submit(entry));
                 })
             }
-
         }
     }
+}
+
+fn get_entry_text(entry: &gtk4::Entry) -> String {
+    let buffer = entry.buffer();
+    buffer.text().into()
+}
+
+fn set_entry_text(entry: &gtk4::Entry, new_text: &str) {
+    let buffer = entry.buffer();
+    buffer.set_text(new_text);
 }

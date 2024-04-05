@@ -12,7 +12,7 @@ mod gamepath;
 mod modlist;
 
 struct AppModel {
-    game_path: String,
+    game_install_path: String,
 
     gamepath: Controller<gamepath::GamePathModel>,
     modlist: Controller<modlist::ModListModel>,
@@ -20,12 +20,10 @@ struct AppModel {
 }
 
 #[derive(Debug)]
-enum AppInput {
+pub enum AppInput {
     Ignore,
 
-    GamePathSubmit(gtk4::Entry),
-    GamePathClear(gtk4::Entry),
-    GamePathBrowse(gtk4::Window, gtk4::Entry),
+    SetPath(String),
 
     SelectMod(gtk4::ColumnView),
 
@@ -113,17 +111,18 @@ impl SimpleComponent for AppModel {
 
     /// Initialize the UI and model
     fn init(
-        game_path: Self::Init,
+        game_install_path: Self::Init,
         window: Self::Root,
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
         // Game path chooser component
         let gamepath_input = (window.clone(), String::from("~/.steam"));
         let gamepath = gamepath::GamePathModel::builder()
-                .launch(gamepath_input)
-                .forward(sender.input_sender(), |msg| match msg {
-                    _ => AppInput::Ignore,
-                });
+            .launch(gamepath_input)
+            .forward(sender.input_sender(), |msg| msg);
+            // .forward(sender.input_sender(), |msg| match msg {
+            //     gamepath::GamePathOutput::SetPath(new_path) => AppInput::SetPath(new_path),
+            // });
 
         // Mod list compoonent
         let modlist =
@@ -133,7 +132,11 @@ impl SimpleComponent for AppModel {
                     _ => AppInput::Ignore,
                 });
 
-        let model = AppModel { game_path, gamepath, modlist };
+        let model = AppModel {
+            game_install_path,
+            gamepath,
+            modlist,
+        };
 
         let widgets = view_output!();
         ComponentParts { model, widgets }
@@ -141,50 +144,13 @@ impl SimpleComponent for AppModel {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
-            AppInput::Ignore => {}
-            AppInput::GamePathSubmit(entry) => {
-                // Grab the current text from the entry
-                let buffer = entry.buffer();
-                let text: String = buffer.text().into();
+            AppInput::Ignore => {},
 
-                // Set that text as the game path
-                self.game_path = text;
-            }
+            AppInput::SetPath(new_path) => {
+                self.game_install_path = new_path;
+            },
 
-            AppInput::GamePathClear(entry) => {
-                // Set the game path as an empty string
-                self.game_path = String::from("");
-
-                // Clear the entry
-                let buffer = entry.buffer();
-                buffer.set_text("");
-            }
-
-            AppInput::GamePathBrowse(root_window, entry) => {
-                let cancellable = gio::Cancellable::new();
-                let chooser = FileDialog::builder()
-                    .modal(true)
-                    .title("Choose the game installation directory")
-                    .build();
-
-                // Make the user select a folder
-                chooser.select_folder(Some(&root_window), Some(&cancellable), move |result| {
-                    // Get the absolute path of the selected folder
-                    let path = result.unwrap().path().unwrap();
-                    let path: String = path.as_path().display().to_string();
-
-                    // Set it as the current buffer of the game path entry
-                    let buffer = entry.buffer();
-                    buffer.set_text(path);
-
-                    // Send the submit signal
-                    _sender.input(AppInput::GamePathSubmit(entry));
-                })
-            }
-
-            AppInput::SelectMod(mods_columnview) => {
-                let factory = mods_columnview.header_factory().unwrap();
-            }
+            AppInput::SelectMod(mods_columnview) => {},
 
             AppInput::AddNewMod(mods_columnview) => {
                 let factory = gtk4::SignalListItemFactory::new();
@@ -203,10 +169,10 @@ impl SimpleComponent for AppModel {
 
                 mods_columnview.insert_column(0, &name_column);
                 mods_columnview.insert_column(1, &version_column);
-            }
+            },
         }
 
-        //println!("Debug: {}", self.game_path);
+        println!("Debug: {}", self.game_install_path);
     }
 }
 
