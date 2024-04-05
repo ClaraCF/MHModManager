@@ -7,18 +7,22 @@ use gtk4::prelude::*;
 use gtk4::*;
 use relm4::prelude::*;
 
+mod filelist;
+mod gamepath;
 mod modlist;
 
 struct AppModel {
     game_path: String,
 
-    modlist: relm4::Controller<modlist::ModListModel>,
+    gamepath: Controller<gamepath::GamePathModel>,
+    modlist: Controller<modlist::ModListModel>,
+    //filelist: Controller<filelist::FileListModel>,
 }
 
 #[derive(Debug)]
 enum AppInput {
     Ignore,
-    
+
     GamePathSubmit(gtk4::Entry),
     GamePathClear(gtk4::Entry),
     GamePathBrowse(gtk4::Window, gtk4::Entry),
@@ -51,51 +55,7 @@ impl SimpleComponent for AppModel {
                 set_halign: Align::Fill,
 
                 // Game path hbox
-                gtk4::Box {
-                    set_orientation: gtk4::Orientation::Horizontal,
-                    set_spacing: 5,
-                    set_margin_all: 5,
-                    set_margin_horizontal: 10,
-                    set_margin_top: 10,
-                    set_hexpand: true,
-                    set_halign: Align::Fill,
-
-                    gtk4::Label {
-                        set_label: "Game path: ",
-                    },
-
-                    #[name ="game_path_entry"]
-                    gtk4::Entry {
-                        set_hexpand: true,
-                        set_halign: Align::Fill,
-                        connect_activate[sender] => move |entry|{
-                            sender.input(AppInput::GamePathSubmit(entry.clone()));
-                        }
-                    },
-
-                    gtk4::Button {
-                        set_label: "Submit",
-                        connect_clicked[sender, game_path_entry] => move |_| {
-                            sender.input(AppInput::GamePathSubmit(game_path_entry.clone()));
-                        }
-                    },
-
-                    gtk4::Button {
-                        set_label: "Clear",
-                        connect_clicked[sender, game_path_entry] => move |_| {
-                            sender.input(AppInput::GamePathClear(game_path_entry.clone()));
-                        }
-                    },
-
-                    gtk4::Button {
-                        set_label: "Browse",
-                        connect_clicked[sender, root_window, game_path_entry] => move |_| {
-                            sender.input(
-                                AppInput::GamePathBrowse(root_window.clone(), game_path_entry.clone())
-                            );
-                        }
-                    },
-                },
+                model.gamepath.widget(),
 
                 gtk4::Box {
                     set_orientation: gtk4::Orientation::Horizontal,
@@ -120,18 +80,6 @@ impl SimpleComponent for AppModel {
                         set_hexpand: true,
                         set_halign: Align::Fill,
                         set_label: Some("Mod Files"),
-
-
-                        // gtk4::ScrolledWindow {
-                        //     set_hscrollbar_policy: gtk4::PolicyType::Never,
-                        //     set_min_content_height: 360,
-                        //     set_vexpand: true,
-                        //
-                        //     #[name = "files_listbox"]
-                        //     gtk4::ListBox {
-                        //
-                        //     }
-                        // }
                     },
                 },
 
@@ -169,16 +117,23 @@ impl SimpleComponent for AppModel {
         window: Self::Root,
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        let modlist = modlist::ModListModel::builder()
-            .launch(())
-            .forward(sender.input_sender(), |msg| match msg {
-                _ => {AppInput::Ignore},
-            });
+        // Game path chooser component
+        let gamepath_input = (window.clone(), String::from("~/.steam"));
+        let gamepath = gamepath::GamePathModel::builder()
+                .launch(gamepath_input)
+                .forward(sender.input_sender(), |msg| match msg {
+                    _ => AppInput::Ignore,
+                });
 
-        let model = AppModel {
-            game_path,
-            modlist,
-        };
+        // Mod list compoonent
+        let modlist =
+            modlist::ModListModel::builder()
+                .launch(())
+                .forward(sender.input_sender(), |msg| match msg {
+                    _ => AppInput::Ignore,
+                });
+
+        let model = AppModel { game_path, gamepath, modlist };
 
         let widgets = view_output!();
         ComponentParts { model, widgets }
@@ -186,7 +141,7 @@ impl SimpleComponent for AppModel {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
-            AppInput::Ignore => {},
+            AppInput::Ignore => {}
             AppInput::GamePathSubmit(entry) => {
                 // Grab the current text from the entry
                 let buffer = entry.buffer();
