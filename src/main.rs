@@ -2,61 +2,70 @@
 //use std::fs::File;
 //use std::path::Path;
 
-use gtk::glib::clone;
-use gtk::prelude::*;
+//use gtk4::glib::clone;
+use gtk4::prelude::*;
 use gtk4::*;
 use relm4::prelude::*;
 
+mod modlist;
+
 struct AppModel {
     game_path: String,
+
+    modlist: relm4::Controller<modlist::ModListModel>,
 }
 
 #[derive(Debug)]
 enum AppInput {
+    Ignore,
+    
     GamePathSubmit(gtk4::Entry),
     GamePathClear(gtk4::Entry),
     GamePathBrowse(gtk4::Window, gtk4::Entry),
-}
 
-struct AppWidgets {}
+    SelectMod(gtk4::ColumnView),
+
+    AddNewMod(gtk4::ColumnView),
+}
 
 #[relm4::component]
 impl SimpleComponent for AppModel {
     type Input = AppInput;
     type Output = ();
     type Init = String;
-    //type Root = gtk::Window;
-    //type Widgets = AppWidgets;
+    //type Root = gtk4::Window;
+    type Widgets = AppWidgets;
 
     view! {
-        #[root]
         #[name = "root_window"]
-        gtk::Window {
+        gtk4::Window {
             set_title: Some("Monster Hunter Mod Manager"),
             set_default_width: 960,
             set_default_height: 540,
 
-            gtk::Box {
-                set_orientation: gtk::Orientation::Vertical,
+            gtk4::Box {
+                set_orientation: gtk4::Orientation::Vertical,
                 set_spacing: 5,
                 set_margin_all: 5,
                 set_hexpand: true,
                 set_halign: Align::Fill,
 
                 // Game path hbox
-                gtk::Box {
-                    set_orientation: gtk::Orientation::Horizontal,
+                gtk4::Box {
+                    set_orientation: gtk4::Orientation::Horizontal,
                     set_spacing: 5,
                     set_margin_all: 5,
+                    set_margin_horizontal: 10,
+                    set_margin_top: 10,
                     set_hexpand: true,
                     set_halign: Align::Fill,
 
-                    gtk::Label {
+                    gtk4::Label {
                         set_label: "Game path: ",
                     },
 
                     #[name ="game_path_entry"]
-                    gtk::Entry {
+                    gtk4::Entry {
                         set_hexpand: true,
                         set_halign: Align::Fill,
                         connect_activate[sender] => move |entry|{
@@ -64,27 +73,90 @@ impl SimpleComponent for AppModel {
                         }
                     },
 
-                    gtk::Button {
+                    gtk4::Button {
                         set_label: "Submit",
                         connect_clicked[sender, game_path_entry] => move |_| {
                             sender.input(AppInput::GamePathSubmit(game_path_entry.clone()));
                         }
                     },
 
-                    gtk::Button {
+                    gtk4::Button {
                         set_label: "Clear",
                         connect_clicked[sender, game_path_entry] => move |_| {
                             sender.input(AppInput::GamePathClear(game_path_entry.clone()));
                         }
                     },
 
-                    gtk::Button {
+                    gtk4::Button {
                         set_label: "Browse",
                         connect_clicked[sender, root_window, game_path_entry] => move |_| {
                             sender.input(
                                 AppInput::GamePathBrowse(root_window.clone(), game_path_entry.clone())
                             );
                         }
+                    },
+                },
+
+                gtk4::Box {
+                    set_orientation: gtk4::Orientation::Horizontal,
+                    set_spacing: 15,
+                    set_margin_all: 5,
+                    set_margin_horizontal: 10,
+                    set_hexpand: true,
+                    set_halign: Align::Fill,
+
+                    // Mod list frame
+                    gtk4::Frame {
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        set_halign: Align::Fill,
+                        set_label: Some("Mods"),
+
+                        model.modlist.widget(),
+                    },
+
+                    // Files frame
+                    gtk4::Frame {
+                        set_hexpand: true,
+                        set_halign: Align::Fill,
+                        set_label: Some("Mod Files"),
+
+
+                        // gtk4::ScrolledWindow {
+                        //     set_hscrollbar_policy: gtk4::PolicyType::Never,
+                        //     set_min_content_height: 360,
+                        //     set_vexpand: true,
+                        //
+                        //     #[name = "files_listbox"]
+                        //     gtk4::ListBox {
+                        //
+                        //     }
+                        // }
+                    },
+                },
+
+                // Buttons
+                gtk4::Box {
+                    set_orientation: gtk4::Orientation::Horizontal,
+                    set_spacing: 10,
+                    set_margin_all: 5,
+                    set_hexpand: true,
+                    set_halign: Align::Center,
+
+                    gtk4::Button {
+                        set_label: "Disable",
+                    },
+
+                    gtk4::Button {
+                        set_label: "Uninstall",
+                    },
+
+                    gtk4::Button {
+                        set_label: "Add new mod",
+
+                        // connect_clicked[sender, mods_columnview] => move |_|{
+                        //     sender.input(AppInput::AddNewMod(mods_columnview.clone()));
+                        // }
                     },
                 }
             }
@@ -97,13 +169,24 @@ impl SimpleComponent for AppModel {
         window: Self::Root,
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        let model = AppModel { game_path };
+        let modlist = modlist::ModListModel::builder()
+            .launch(())
+            .forward(sender.input_sender(), |msg| match msg {
+                _ => {AppInput::Ignore},
+            });
+
+        let model = AppModel {
+            game_path,
+            modlist,
+        };
+
         let widgets = view_output!();
         ComponentParts { model, widgets }
     }
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
+            AppInput::Ignore => {},
             AppInput::GamePathSubmit(entry) => {
                 // Grab the current text from the entry
                 let buffer = entry.buffer();
@@ -112,6 +195,7 @@ impl SimpleComponent for AppModel {
                 // Set that text as the game path
                 self.game_path = text;
             }
+
             AppInput::GamePathClear(entry) => {
                 // Set the game path as an empty string
                 self.game_path = String::from("");
@@ -120,6 +204,7 @@ impl SimpleComponent for AppModel {
                 let buffer = entry.buffer();
                 buffer.set_text("");
             }
+
             AppInput::GamePathBrowse(root_window, entry) => {
                 let cancellable = gio::Cancellable::new();
                 let chooser = FileDialog::builder()
@@ -141,9 +226,32 @@ impl SimpleComponent for AppModel {
                     _sender.input(AppInput::GamePathSubmit(entry));
                 })
             }
+
+            AppInput::SelectMod(mods_columnview) => {
+                let factory = mods_columnview.header_factory().unwrap();
+            }
+
+            AppInput::AddNewMod(mods_columnview) => {
+                let factory = gtk4::SignalListItemFactory::new();
+
+                let name_column = gtk4::ColumnViewColumn::builder()
+                    .title("Name")
+                    .factory(&factory)
+                    .expand(true)
+                    .build();
+
+                let version_column = gtk4::ColumnViewColumn::builder()
+                    .title("Version")
+                    .factory(&factory)
+                    .expand(true)
+                    .build();
+
+                mods_columnview.insert_column(0, &name_column);
+                mods_columnview.insert_column(1, &version_column);
+            }
         }
 
-        println!("Debug: {}", self.game_path);
+        //println!("Debug: {}", self.game_path);
     }
 }
 
