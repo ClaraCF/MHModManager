@@ -7,14 +7,19 @@ use gtk4::prelude::*;
 use gtk4::*;
 use relm4::prelude::*;
 
+mod utils;
+
 mod filelist;
 mod gamepath;
 mod modlist;
 
+use futures::prelude::*;
+use tokio;
+
 struct AppModel {
     game_install_path: String,
 
-    gamepath: Controller<gamepath::GamePathModel>,
+    gamepath: AsyncController<gamepath::GamePathModel>,
     modlist: Controller<modlist::ModListModel>,
     //filelist: Controller<filelist::FileListModel>,
 }
@@ -30,13 +35,14 @@ pub enum AppInput {
     AddNewMod(gtk4::ColumnView),
 }
 
-#[relm4::component]
-impl SimpleComponent for AppModel {
+#[relm4::component(async)]
+impl AsyncComponent for AppModel {
     type Input = AppInput;
     type Output = ();
     type Init = String;
     //type Root = gtk4::Window;
     type Widgets = AppWidgets;
+    type CommandOutput = ();
 
     view! {
         #[name = "root_window"]
@@ -111,11 +117,11 @@ impl SimpleComponent for AppModel {
     }
 
     /// Initialize the UI and model
-    fn init(
+    async fn init(
         game_install_path: Self::Init,
         window: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> relm4::ComponentParts<Self> {
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         // Game path chooser component
         let gamepath_input = (window.clone(), String::from("~/.steam"));
         let gamepath = gamepath::GamePathModel::builder()
@@ -140,10 +146,15 @@ impl SimpleComponent for AppModel {
         };
 
         let widgets = view_output!();
-        ComponentParts { model, widgets }
+        AsyncComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
+    async fn update(
+        &mut self,
+        message: Self::Input,
+        _sender: AsyncComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
         match message {
             AppInput::Ignore => {}
 
@@ -177,7 +188,8 @@ impl SimpleComponent for AppModel {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let app = RelmApp::new("me.claracf.mh-mod-manager");
-    app.run::<AppModel>(String::from(""));
+    app.run_async::<AppModel>(String::from(""));
 }

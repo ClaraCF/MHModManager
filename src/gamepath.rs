@@ -1,7 +1,11 @@
 //use gtk::glib::clone;
+use futures::prelude::*;
 use gtk4::prelude::*;
 use gtk4::*;
 use relm4::prelude::*;
+//use tokio::*;
+
+use crate::utils;
 
 pub struct GamePathModel {
     root_window: gtk4::Window,
@@ -22,14 +26,15 @@ pub enum GamePathInput {
 
 pub struct GamePathWidgets {}
 
-#[relm4::component(pub)]
-impl SimpleComponent for GamePathModel {
+#[relm4::component(pub, async)]
+impl AsyncComponent for GamePathModel {
     type Input = GamePathInput;
     // type Output = GamePathOutput;
     type Output = crate::AppInput;
     type Init = (gtk4::Window, String);
     //type Root = gtk4::Box;
     //type Widgets = GamePathWidgets;
+    type CommandOutput = ();
 
     view! {
         gtk4::Box {
@@ -80,11 +85,11 @@ impl SimpleComponent for GamePathModel {
     }
 
     /// Initialize the UI and model
-    fn init(
+    async fn init(
         input: Self::Init,
         window: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         // Define the model of the component
         let model = GamePathModel {
             root_window: input.0,
@@ -95,56 +100,49 @@ impl SimpleComponent for GamePathModel {
         let widgets = view_output!();
 
         // Set the default entry path
-        set_entry_text(&widgets.game_path_entry, &model.default_game_path);
+        set_entry_text(&widgets.game_path_entry, &model.default_game_path).await;
 
-        ComponentParts { model, widgets }
+        AsyncComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
+    async fn update(
+        &mut self,
+        message: Self::Input,
+        _sender: AsyncComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
         match message {
             GamePathInput::Submit(entry) => {
-                let text = get_entry_text(&entry);
+                let text = get_entry_text(&entry).await;
                 _sender.output(Self::Output::SetPath(text)).unwrap();
             }
 
             GamePathInput::Clear(entry) => {
                 // Clear the entry
-                set_entry_text(&entry, "");
+                set_entry_text(&entry, "").await;
                 _sender.input(GamePathInput::Submit(entry));
             }
 
             GamePathInput::Browse(entry) => {
-                let cancellable = gio::Cancellable::new();
-                let chooser = FileDialog::builder()
-                    .modal(true)
-                    .title("Choose the game installation directory")
-                    .build();
-
-                // Make the user select a folder
-                chooser.select_folder(Some(&self.root_window), Some(&cancellable), move |result| {
-                    if result.clone().err() == None {
-                        // Get the absolute path of the selected folder
-                        let path = result.unwrap().path().unwrap();
-                        let path = path.as_path().display().to_string();
-
-                        // Set it as the current buffer of the game path entry
-                        set_entry_text(&entry, &path);
-
-                        // Send the submit signal
+                match utils::choose_directory(&self.root_window).await {
+                    Some(path) => {
+                        println!("[DEBUG] gamepath.rs: {}", path);
+                        set_entry_text(&entry, &path).await;
                         _sender.input(GamePathInput::Submit(entry));
                     }
-                });
+                    None => println!("[DEBUG] gamepath.rs: None"),
+                }
             }
         }
     }
 }
 
-fn get_entry_text(entry: &gtk4::Entry) -> String {
+async fn get_entry_text(entry: &gtk4::Entry) -> String {
     let buffer = entry.buffer();
     buffer.text().into()
 }
 
-fn set_entry_text(entry: &gtk4::Entry, new_text: &str) {
+async fn set_entry_text(entry: &gtk4::Entry, new_text: &str) {
     let buffer = entry.buffer();
     buffer.set_text(new_text);
 }
