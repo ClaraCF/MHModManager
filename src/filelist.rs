@@ -11,6 +11,7 @@ pub enum ModListInput {}
 #[derive(Debug)]
 pub enum ModListOutput {}
 
+#[allow(dead_code)]
 pub struct ModListWidgets {
     header_factory: gtk4::SignalListItemFactory,
 

@@ -2,6 +2,7 @@
 //use std::fs::File;
 //use std::path::Path;
 
+use add_new_mod::NewModWindowInput;
 //use gtk4::glib::clone;
 use gtk4::prelude::*;
 use gtk4::*;
@@ -9,6 +10,7 @@ use relm4::prelude::*;
 
 mod utils;
 
+mod add_new_mod;
 mod filelist;
 mod gamepath;
 mod modlist;
@@ -22,6 +24,8 @@ struct AppModel {
     gamepath: AsyncController<gamepath::GamePathModel>,
     modlist: Controller<modlist::ModListModel>,
     //filelist: Controller<filelist::FileListModel>,
+    
+    new_mod_window: AsyncController<add_new_mod::NewModWindowModel>,
 }
 
 #[derive(Debug)]
@@ -32,7 +36,8 @@ pub enum AppInput {
 
     SelectMod(gtk4::ColumnView),
 
-    AddNewMod(gtk4::ColumnView),
+    // AddNewMod(gtk4::ColumnView),
+    AddNewMod,
 }
 
 #[relm4::component(async)]
@@ -48,8 +53,8 @@ impl AsyncComponent for AppModel {
         #[name = "root_window"]
         gtk4::Window {
             set_title: Some("Monster Hunter Mod Manager"),
-            set_default_width: 960,
-            set_default_height: 540,
+            set_default_width: 1280,
+            set_default_height: 720,
 
             gtk4::Box {
                 set_orientation: gtk4::Orientation::Vertical,
@@ -76,6 +81,7 @@ impl AsyncComponent for AppModel {
                         set_halign: Align::Fill,
                         set_label: Some("Mods"),
 
+                        //#[name(mods_columnview)]
                         model.modlist.widget(),
                     },
 
@@ -108,8 +114,10 @@ impl AsyncComponent for AppModel {
                         set_css_classes: &["suggested-action"],
 
                         // connect_clicked[sender, mods_columnview] => move |_|{
-                        //     sender.input(AppInput::AddNewMod(mods_columnview.clone()));
-                        // }
+                        connect_clicked[sender] => move |_|{
+                            // sender.input(AppInput::AddNewMod(mods_columnview.clone()));
+                            sender.input(AppInput::AddNewMod);
+                        }
                     },
                 }
             }
@@ -127,22 +135,23 @@ impl AsyncComponent for AppModel {
         let gamepath = gamepath::GamePathModel::builder()
             .launch(gamepath_input)
             .forward(sender.input_sender(), |msg| msg);
-        // .forward(sender.input_sender(), |msg| match msg {
-        //     gamepath::GamePathOutput::SetPath(new_path) => AppInput::SetPath(new_path),
-        // });
 
         // Mod list compoonent
-        let modlist =
-            modlist::ModListModel::builder()
-                .launch(())
-                .forward(sender.input_sender(), |msg| match msg {
-                    _ => AppInput::Ignore,
-                });
+        let modlist = modlist::ModListModel::builder()
+            .launch(())
+            .forward(sender.input_sender(), |_msg| AppInput::Ignore);
+
+        // Add new mod window
+        let new_mod_window = add_new_mod::NewModWindowModel::builder()
+            .launch(true)
+            .forward(sender.input_sender(), |_msg| AppInput::Ignore);
 
         let model = AppModel {
             game_install_path,
             gamepath,
             modlist,
+
+            new_mod_window,
         };
 
         let widgets = view_output!();
@@ -162,9 +171,13 @@ impl AsyncComponent for AppModel {
                 self.game_install_path = new_path;
             }
 
+            #[allow(dead_code)]
             AppInput::SelectMod(mods_columnview) => {}
+            
+            // AppInput::AddNewMod(mods_columnview) => {
+            AppInput::AddNewMod => {
+                self.new_mod_window.sender().send(NewModWindowInput::Show).unwrap();
 
-            AppInput::AddNewMod(mods_columnview) => {
                 let factory = gtk4::SignalListItemFactory::new();
 
                 let name_column = gtk4::ColumnViewColumn::builder()
@@ -179,12 +192,12 @@ impl AsyncComponent for AppModel {
                     .expand(true)
                     .build();
 
-                mods_columnview.insert_column(0, &name_column);
-                mods_columnview.insert_column(1, &version_column);
+                //mods_columnview.insert_column(0, &name_column);
+                //mods_columnview.insert_column(1, &version_column);
             }
         }
 
-        println!("Debug: {}", self.game_install_path);
+        // println!("Debug: {}", self.game_install_path);
     }
 }
 
