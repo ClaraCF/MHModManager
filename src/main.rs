@@ -18,13 +18,18 @@ mod modlist;
 use futures::prelude::*;
 use tokio;
 
+struct Mod {
+    name: String,
+    version: String,
+    filepath: String,
+}
+
 struct AppModel {
     game_install_path: String,
 
     gamepath: AsyncController<gamepath::GamePathModel>,
     modlist: Controller<modlist::ModListModel>,
     //filelist: Controller<filelist::FileListModel>,
-    
     new_mod_window: AsyncController<add_new_mod::NewModWindowModel>,
 }
 
@@ -173,10 +178,13 @@ impl AsyncComponent for AppModel {
 
             #[allow(dead_code)]
             AppInput::SelectMod(mods_columnview) => {}
-            
+
             // AppInput::AddNewMod(mods_columnview) => {
             AppInput::AddNewMod => {
-                self.new_mod_window.sender().send(NewModWindowInput::Show).unwrap();
+                self.new_mod_window
+                    .sender()
+                    .send(NewModWindowInput::Show)
+                    .unwrap();
 
                 let factory = gtk4::SignalListItemFactory::new();
 

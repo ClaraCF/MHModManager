@@ -100,7 +100,7 @@ impl AsyncComponent for GamePathModel {
         let widgets = view_output!();
 
         // Set the default entry path
-        set_entry_text(&widgets.game_path_entry, &model.default_game_path).await;
+        utils::set_entry_text(&widgets.game_path_entry, &model.default_game_path).await;
 
         AsyncComponentParts { model, widgets }
     }
@@ -113,21 +113,24 @@ impl AsyncComponent for GamePathModel {
     ) {
         match message {
             GamePathInput::Submit(entry) => {
-                let text = get_entry_text(&entry).await;
+                let text = utils::get_entry_text(&entry).await;
                 _sender.output(Self::Output::SetPath(text)).unwrap();
             }
 
             GamePathInput::Clear(entry) => {
                 // Clear the entry
-                set_entry_text(&entry, "").await;
+                utils::set_entry_text(&entry, "").await;
                 _sender.input(GamePathInput::Submit(entry));
             }
 
             GamePathInput::Browse(entry) => {
-                match utils::choose_directory(&self.root_window).await {
+                match utils::choose_directory(
+                    &self.root_window,
+                    "Choose the game installation directory",
+                ).await {
                     Some(path) => {
                         println!("[DEBUG] gamepath.rs: {}", path);
-                        set_entry_text(&entry, &path).await;
+                        utils::set_entry_text(&entry, &path).await;
                         _sender.input(GamePathInput::Submit(entry));
                     }
                     None => println!("[DEBUG] gamepath.rs: None"),
@@ -137,12 +140,3 @@ impl AsyncComponent for GamePathModel {
     }
 }
 
-async fn get_entry_text(entry: &gtk4::Entry) -> String {
-    let buffer = entry.buffer();
-    buffer.text().into()
-}
-
-async fn set_entry_text(entry: &gtk4::Entry, new_text: &str) {
-    let buffer = entry.buffer();
-    buffer.set_text(new_text);
-}
