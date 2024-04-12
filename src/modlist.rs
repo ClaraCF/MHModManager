@@ -1,6 +1,5 @@
-//use gtk::glib::clone;
-//use gtk4::prelude::*;
-//use gtk4::*;
+use gtk4::prelude::*;
+use gtk4::*;
 use relm4::{
     binding::{Binding, U8Binding},
     prelude::*,
@@ -17,61 +16,91 @@ struct NameColumn;
 struct VersionColumn;
 struct StatusColumn;
 
-impl LabelColumn for NameColumn {
+impl RelmColumn for NameColumn {
+    type Root = gtk4::Box;
+    type Widgets = gtk4::Label;
     type Item = Mod;
-    type Value = String;
 
     const COLUMN_NAME: &'static str = "Name";
 
-    const ENABLE_SORT: bool = true;
     const ENABLE_RESIZE: bool = true;
+    const ENABLE_EXPAND: bool = true;
 
-    fn get_cell_value(the_mod: &Self::Item) -> Self::Value {
-        the_mod.name.clone()
+    fn setup(_item: &gtk::ListItem) -> (Self::Root, Self::Widgets) {
+        let container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+        let label = gtk4::Label::new(None);
+
+        container.append(&label);
+
+        (container, label)
+    }
+
+    fn bind(item: &mut Self::Item, widgets: &mut Self::Widgets, _root: &mut Self::Root) {
+        widgets.set_text(&item.name);
     }
 }
 
-impl LabelColumn for VersionColumn {
+impl RelmColumn for VersionColumn {
+    type Root = gtk4::Box;
+    type Widgets = gtk4::Label;
     type Item = Mod;
-    type Value = String;
 
     const COLUMN_NAME: &'static str = "Version";
 
-    const ENABLE_SORT: bool = true;
     const ENABLE_RESIZE: bool = true;
+    const ENABLE_EXPAND: bool = true;
 
-    fn get_cell_value(the_mod: &Self::Item) -> Self::Value {
-        the_mod.version.clone()
+    fn setup(_item: &gtk::ListItem) -> (Self::Root, Self::Widgets) {
+        let container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+        let label = gtk4::Label::new(None);
+
+        container.append(&label);
+
+        (container, label)
+    }
+
+    fn bind(item: &mut Self::Item, widgets: &mut Self::Widgets, _root: &mut Self::Root) {
+        widgets.set_text(&item.version);
     }
 }
 
-impl LabelColumn for StatusColumn {
+impl RelmColumn for StatusColumn {
+    type Root = gtk4::Box;
+    type Widgets = gtk4::Label;
     type Item = Mod;
-    type Value = String;
 
     const COLUMN_NAME: &'static str = "Status";
 
-    const ENABLE_SORT: bool = true;
     const ENABLE_RESIZE: bool = true;
+    const ENABLE_EXPAND: bool = true;
 
-    fn get_cell_value(the_mod: &Self::Item) -> Self::Value {
-        match the_mod.status {
-            ModStatus::Enabled => String::from("Enabled"),
-            ModStatus::Disabled => String::from("Disabled"),
-            ModStatus::NotInstalled => String::from("Not Installed"),
-        }
+    fn setup(_item: &gtk::ListItem) -> (Self::Root, Self::Widgets) {
+        let container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+        let label = gtk4::Label::new(None);
+
+        container.append(&label);
+
+        (container, label)
+    }
+
+    fn bind(item: &mut Self::Item, widgets: &mut Self::Widgets, _root: &mut Self::Root) {
+        widgets.set_text(match item.status {
+            ModStatus::Enabled => "Enabled",
+            ModStatus::Disabled => "Disabled",
+            ModStatus::NotInstalled => "Not Installed",
+        });
     }
 }
 
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct ModListWidgets {
-}
+// #[allow(dead_code)]
+// #[derive(Clone)]
+// pub struct ModListWidgets {
+// }
 
 pub struct ModListModel {
-    widgets: ModListWidgets,
+    // widgets: ModListWidgets,
     view_wrapper: TypedColumnView::<Mod, gtk::SingleSelection>,
-    mod_count: u32,
+    // mod_count: u32,
 }
 
 #[derive(Debug)]
@@ -83,23 +112,30 @@ pub enum ModListInput {
 pub enum ModListOutput {}
 
 
-// #[relm4::component(pub)]
+#[relm4::component(pub, async)]
 impl AsyncComponent for ModListModel {
     type Input = ModListInput;
     type Output = ModListOutput;
-    type Init = u32;
-    type Root = gtk4::ScrolledWindow;
+    type Init = ();
+    // type Root = gtk4::ScrolledWindow;
     type Widgets = ModListWidgets;
     type CommandOutput = ();
 
-    fn init_root() -> Self::Root {
-        gtk4::ScrolledWindow::new()
+    view! {
+        gtk4::ScrolledWindow {
+            set_hscrollbar_policy: gtk::PolicyType::Never,
+            set_halign: gtk4::Align::Fill,
+        }
     }
 
+    // fn init_root() -> Self::Root {
+    //     gtk4::ScrolledWindow::new()
+    // }
+
     async fn init(
-        init: Self::Init,
+        _init: Self::Init,
         root: Self::Root,
-        sender: AsyncComponentSender<Self>,
+        _sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
         // Initialize the ListView wrapper
         let mut view_wrapper = TypedColumnView::<Mod, gtk::SingleSelection>::new();
@@ -109,13 +145,17 @@ impl AsyncComponent for ModListModel {
 
         root.set_child(Some(&view_wrapper.view));
 
-        let widgets = ModListWidgets {
-        };
+        // let widgets = ModListWidgets {
+        // };
+
+        let widgets = view_output!();
+
+        // widgets.scrolled_window.set_child(Some(&view_wrapper.view));
 
         let model = ModListModel {
-            widgets: widgets.clone(),
+            // widgets,
             view_wrapper,
-            mod_count: init,
+            // mod_count: init,
         };
 
         AsyncComponentParts { model, widgets }

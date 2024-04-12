@@ -142,7 +142,7 @@ impl AsyncComponent for AppModel {
 
         // Mod list compoonent
         let modlist = modlist::ModListModel::builder()
-            .launch(0)
+            .launch(())
             .forward(sender.input_sender(), |_msg| AppInput::Ignore);
 
         // Add new mod window
