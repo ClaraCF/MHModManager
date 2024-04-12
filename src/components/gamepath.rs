@@ -7,6 +7,8 @@ use relm4::prelude::*;
 
 use crate::utils;
 
+use crate::components::*;
+
 pub struct GamePathModel {
     root_window: gtk4::Window,
     default_game_path: String,
@@ -30,7 +32,7 @@ pub struct GamePathWidgets {}
 impl AsyncComponent for GamePathModel {
     type Input = GamePathInput;
     // type Output = GamePathOutput;
-    type Output = crate::AppInput;
+    type Output = app::AppInput;
     type Init = (gtk4::Window, String);
     //type Root = gtk4::Box;
     //type Widgets = GamePathWidgets;

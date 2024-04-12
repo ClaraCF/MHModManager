@@ -1,13 +1,7 @@
 use gtk4::prelude::*;
-use gtk4::*;
 use relm4::{
-    binding::{Binding, U8Binding},
     prelude::*,
-    typed_view::{
-        column::{LabelColumn, RelmColumn, TypedColumnView},
-        OrdFn,
-    },
-    RelmObjectExt,
+    typed_view::column::{RelmColumn, TypedColumnView},
 };
 
 use crate::types::*;
@@ -23,7 +17,7 @@ impl RelmColumn for NameColumn {
 
     const COLUMN_NAME: &'static str = "Name";
 
-    const ENABLE_RESIZE: bool = true;
+    const ENABLE_RESIZE: bool = false;
     const ENABLE_EXPAND: bool = true;
 
     fn setup(_item: &gtk::ListItem) -> (Self::Root, Self::Widgets) {
@@ -47,7 +41,7 @@ impl RelmColumn for VersionColumn {
 
     const COLUMN_NAME: &'static str = "Version";
 
-    const ENABLE_RESIZE: bool = true;
+    const ENABLE_RESIZE: bool = false;
     const ENABLE_EXPAND: bool = true;
 
     fn setup(_item: &gtk::ListItem) -> (Self::Root, Self::Widgets) {
@@ -71,7 +65,7 @@ impl RelmColumn for StatusColumn {
 
     const COLUMN_NAME: &'static str = "Status";
 
-    const ENABLE_RESIZE: bool = true;
+    const ENABLE_RESIZE: bool = false;
     const ENABLE_EXPAND: bool = true;
 
     fn setup(_item: &gtk::ListItem) -> (Self::Root, Self::Widgets) {
@@ -99,7 +93,7 @@ impl RelmColumn for StatusColumn {
 
 pub struct ModListModel {
     // widgets: ModListWidgets,
-    view_wrapper: TypedColumnView::<Mod, gtk::SingleSelection>,
+    view_wrapper: TypedColumnView<Mod, gtk::SingleSelection>,
     // mod_count: u32,
 }
 
@@ -110,7 +104,6 @@ pub enum ModListInput {
 
 #[derive(Debug)]
 pub enum ModListOutput {}
-
 
 #[relm4::component(pub, async)]
 impl AsyncComponent for ModListModel {
@@ -123,7 +116,7 @@ impl AsyncComponent for ModListModel {
 
     view! {
         gtk4::ScrolledWindow {
-            set_hscrollbar_policy: gtk::PolicyType::Never,
+            // set_hscrollbar_policy: gtk::PolicyType::Never,
             set_halign: gtk4::Align::Fill,
         }
     }
@@ -139,6 +132,9 @@ impl AsyncComponent for ModListModel {
     ) -> AsyncComponentParts<Self> {
         // Initialize the ListView wrapper
         let mut view_wrapper = TypedColumnView::<Mod, gtk::SingleSelection>::new();
+
+        view_wrapper.view.set_reorderable(false);
+
         view_wrapper.append_column::<NameColumn>();
         view_wrapper.append_column::<VersionColumn>();
         view_wrapper.append_column::<StatusColumn>();

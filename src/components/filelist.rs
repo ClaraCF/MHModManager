@@ -65,12 +65,11 @@ impl LabelColumn for StatusColumn {
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct ModListWidgets {
-}
+pub struct ModListWidgets {}
 
 pub struct ModListModel {
     widgets: ModListWidgets,
-    view_wrapper: TypedColumnView::<Mod, gtk::SingleSelection>,
+    view_wrapper: TypedColumnView<Mod, gtk::SingleSelection>,
     mod_count: u32,
 }
 
@@ -81,7 +80,6 @@ pub enum ModListInput {
 
 #[derive(Debug)]
 pub enum ModListOutput {}
-
 
 // #[relm4::component(pub)]
 impl AsyncComponent for ModListModel {
@@ -109,8 +107,7 @@ impl AsyncComponent for ModListModel {
 
         root.set_child(Some(&view_wrapper.view));
 
-        let widgets = ModListWidgets {
-        };
+        let widgets = ModListWidgets {};
 
         let model = ModListModel {
             widgets: widgets.clone(),

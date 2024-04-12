@@ -1,16 +1,20 @@
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModStatus {
     Enabled,
     Disabled,
     NotInstalled,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Mod {
     pub name: String,
     pub version: String,
     pub filepath: String,
     pub status: ModStatus,
+    pub files: Option<Vec<String>>,
 }
 
 impl Mod {
@@ -20,8 +24,7 @@ impl Mod {
             version: version.into(),
             filepath: filepath.into(),
             status: ModStatus::NotInstalled,
+            files: None,
         }
     }
 }
-
-

@@ -10,11 +10,11 @@ use relm4::prelude::*;
 use crate::types::*;
 use crate::utils;
 
-use crate::modlist;
+use crate::components::*;
 
 pub struct NewModWindowModel {
     hidden: bool,
-    
+
     name_entry: Option<gtk4::Entry>,
     version_entry: Option<gtk4::Entry>,
     filepath_entry: Option<gtk4::Entry>,
@@ -32,7 +32,7 @@ pub enum NewModWindowInput {
 impl AsyncComponent for NewModWindowModel {
     type Init = bool;
     type Input = NewModWindowInput;
-    type Output = crate::AppInput;
+    type Output = app::AppInput;
     //type Root = gtk4::Window;
     type Widgets = NewModWindowWidgets;
     type CommandOutput = ();
@@ -220,7 +220,6 @@ impl AsyncComponent for NewModWindowModel {
 
             NewModWindowInput::Add => {
                 self.hidden = true;
-
 
                 let new_mod = Mod::new(
                     utils::get_entry_text(self.name_entry.as_ref().unwrap()).await,
