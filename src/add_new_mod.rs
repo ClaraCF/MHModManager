@@ -7,10 +7,17 @@ use gtk4::prelude::*;
 use gtk4::*;
 use relm4::prelude::*;
 
+use crate::types::*;
 use crate::utils;
+
+use crate::modlist;
 
 pub struct NewModWindowModel {
     hidden: bool,
+    
+    name_entry: Option<gtk4::Entry>,
+    version_entry: Option<gtk4::Entry>,
+    filepath_entry: Option<gtk4::Entry>,
 }
 
 #[derive(Debug)]
@@ -25,7 +32,7 @@ pub enum NewModWindowInput {
 impl AsyncComponent for NewModWindowModel {
     type Init = bool;
     type Input = NewModWindowInput;
-    type Output = ();
+    type Output = crate::AppInput;
     //type Root = gtk4::Window;
     type Widgets = NewModWindowWidgets;
     type CommandOutput = ();
@@ -69,6 +76,7 @@ impl AsyncComponent for NewModWindowModel {
                             set_text: "   Name:",
                         },
 
+                        #[name = "name_entry"]
                         gtk4::Entry {
                             set_hexpand: true,
                             set_halign: gtk4::Align::Fill,
@@ -92,6 +100,7 @@ impl AsyncComponent for NewModWindowModel {
                             set_text: "Version:",
                         },
 
+                        #[name = "version_entry"]
                         gtk4::Entry {
                             set_hexpand: true,
                             set_halign: gtk4::Align::Fill,
@@ -178,9 +187,19 @@ impl AsyncComponent for NewModWindowModel {
         window: Self::Root,
         sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
-        let model = NewModWindowModel { hidden };
+        let mut model = NewModWindowModel {
+            hidden,
+            name_entry: None,
+            version_entry: None,
+            filepath_entry: None,
+        };
 
         let widgets = view_output!();
+
+        model.name_entry = Some(widgets.name_entry.clone());
+        model.version_entry = Some(widgets.version_entry.clone());
+        model.filepath_entry = Some(widgets.file_entry.clone());
+
         AsyncComponentParts { model, widgets }
     }
 
@@ -201,13 +220,20 @@ impl AsyncComponent for NewModWindowModel {
 
             NewModWindowInput::Add => {
                 self.hidden = true;
+
+
+                let new_mod = Mod::new(
+                    utils::get_entry_text(self.name_entry.as_ref().unwrap()).await,
+                    utils::get_entry_text(self.version_entry.as_ref().unwrap()).await,
+                    utils::get_entry_text(self.filepath_entry.as_ref().unwrap()).await,
+                );
+
+                _sender.output(Self::Output::InsertMod(new_mod)).unwrap();
             }
 
             NewModWindowInput::Browse(root, entry) => {
-                utils::set_entry_text(
-                    &entry,
-                    &utils::choose_file(&root, "lol").await.unwrap()
-                ).await;
+                utils::set_entry_text(&entry, &utils::choose_file(&root, "lol").await.unwrap())
+                    .await;
             }
         }
     }

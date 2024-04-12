@@ -8,6 +8,7 @@ use gtk4::prelude::*;
 use gtk4::*;
 use relm4::prelude::*;
 
+mod types;
 mod utils;
 
 mod add_new_mod;
@@ -18,17 +19,13 @@ mod modlist;
 use futures::prelude::*;
 use tokio;
 
-struct Mod {
-    name: String,
-    version: String,
-    filepath: String,
-}
+use types::*;
 
 struct AppModel {
     game_install_path: String,
 
     gamepath: AsyncController<gamepath::GamePathModel>,
-    modlist: Controller<modlist::ModListModel>,
+    modlist: AsyncController<modlist::ModListModel>,
     //filelist: Controller<filelist::FileListModel>,
     new_mod_window: AsyncController<add_new_mod::NewModWindowModel>,
 }
@@ -43,6 +40,8 @@ pub enum AppInput {
 
     // AddNewMod(gtk4::ColumnView),
     AddNewMod,
+
+    InsertMod(Mod),
 }
 
 #[relm4::component(async)]
@@ -143,13 +142,13 @@ impl AsyncComponent for AppModel {
 
         // Mod list compoonent
         let modlist = modlist::ModListModel::builder()
-            .launch(())
+            .launch(0)
             .forward(sender.input_sender(), |_msg| AppInput::Ignore);
 
         // Add new mod window
         let new_mod_window = add_new_mod::NewModWindowModel::builder()
             .launch(true)
-            .forward(sender.input_sender(), |_msg| AppInput::Ignore);
+            .forward(sender.input_sender(), |msg| msg);
 
         let model = AppModel {
             game_install_path,
@@ -202,6 +201,13 @@ impl AsyncComponent for AppModel {
 
                 //mods_columnview.insert_column(0, &name_column);
                 //mods_columnview.insert_column(1, &version_column);
+            }
+
+            AppInput::InsertMod(new_mod) => {
+                self.modlist
+                    .sender()
+                    .send(modlist::ModListInput::Insert(new_mod))
+                    .unwrap();
             }
         }
 

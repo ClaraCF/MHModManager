@@ -127,7 +127,9 @@ impl AsyncComponent for GamePathModel {
                 match utils::choose_directory(
                     &self.root_window,
                     "Choose the game installation directory",
-                ).await {
+                )
+                .await
+                {
                     Some(path) => {
                         println!("[DEBUG] gamepath.rs: {}", path);
                         utils::set_entry_text(&entry, &path).await;
@@ -139,4 +141,3 @@ impl AsyncComponent for GamePathModel {
         }
     }
 }
-
